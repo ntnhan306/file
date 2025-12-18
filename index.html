@@ -48,11 +48,21 @@ button.download-btn {
   cursor: pointer;
   font-size: 18px;
   color: #2563eb;
+  transition: 
+    color 0.25s ease,
+    transform 0.2s ease,
+    border 0.2s ease,
+    box-shadow 0.25s ease;
 }
 
 button.download-btn:hover {
-  border: 3px #dc2626 soild;
+  border: 3px #dc2626 solid;
+  transform: scale(1.15);
   color: #dc2626;
+}
+
+button.download-btn:active {
+  transform: scale(0.95);
 }
 </style>
 </head>
