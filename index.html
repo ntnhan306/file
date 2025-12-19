@@ -50,7 +50,9 @@ button.download-btn {
   cursor: pointer;
   font-size: 18px;
   color: #2563eb;
-  transform: translateY(3px);
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
   transition: 
     color 0.25s ease,
     transform 0.2s ease,
@@ -60,7 +62,7 @@ button.download-btn {
 
 button.download-btn:hover {
   border: 3px #dc2626 solid;
-  transform: scale(1.15) translateY(0px);
+  transform: scale(1.15);
   color: #dc2626;
 }
 
