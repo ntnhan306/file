@@ -36,10 +36,15 @@ td.stt {
   width: 60px;
 }
 
-td.download {
+td.download.wrap {
+  text-align: center;
+}
+      
+td.download.wrap {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%; height: 100%;
 }
 
 /* Button chỉ có icon */
@@ -168,11 +173,13 @@ data_table.forEach((item, index) => {
     <td>${tenTaiLieu}</td>
     <td>${tenFile}</td>
     <td class="download">
-      <a href="${link}" download>
-        <button class="download-btn" title="Tải xuống">
-          <i class="fa-solid fa-download"></i>
-        </button>
-      </a>
+      <div class="wrap">
+        <a href="${link}" download>
+          <button class="download-btn" title="Tải xuống">
+            <i class="fa-solid fa-download"></i>
+          </button>
+        </a>
+      </div>
     </td>
   `;
 
