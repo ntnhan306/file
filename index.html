@@ -218,212 +218,166 @@ data_table.forEach((item, index) => {
 });
 
 function preview(path) {
-  // ===== DỌN DẸP =====
-  document.getElementById("preview-overlay")?.remove();
-
-  const fileName = path.split("/").pop();
+  const fileName = decodeURIComponent(path.split("/").pop());
   const ext = fileName.split(".").pop().toLowerCase();
 
-  // ===== OVERLAY =====
+  const OFFICE = ["doc","docx","xls","xlsx","ppt","pptx"];
+  const IMAGE = ["png","jpg","jpeg","gif","webp"];
+  const PDF = ["pdf"];
+  const TEXT = ["txt"];
+
+  const shortName = (n, max=42) => {
+    if (n.length <= max) return n;
+    const d = n.lastIndexOf(".");
+    return n.slice(0, max-5) + "..." + n.slice(d);
+  };
+
+  /* ================= OVERLAY ================= */
   const overlay = document.createElement("div");
-  overlay.id = "preview-overlay";
   overlay.innerHTML = `
+  <div class="pv-overlay">
     <div class="pv-box">
       <div class="pv-header">
-        <span class="pv-title" title="${fileName}">${fileName}</span>
+        <span class="pv-title" title="${fileName}">
+          ${shortName(fileName)}
+        </span>
         <button class="pv-close">✕</button>
       </div>
 
-      <div class="pv-toolbar">
-        <button id="pvZoomOut">−</button>
-        <input id="pvZoom" type="number" value="100" min="25" max="400">%
-        <button id="pvZoomIn">+</button>
+      <div class="pv-toolbar" id="toolbar"></div>
 
-        <span class="pv-page">
-          <input id="pvPage" type="number" value="1" min="1">
-          / <span id="pvTotal">?</span>
-        </span>
-      </div>
-
-      <div class="pv-body"></div>
+      <div class="pv-body" id="viewer"></div>
     </div>
-  `;
+  </div>`;
   document.body.appendChild(overlay);
 
-  // ===== CSS =====
+  /* ================= CSS ================= */
   const style = document.createElement("style");
   style.textContent = `
-    #preview-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(15,23,42,.65);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      animation: pvFade .25s ease;
-    }
-
-    .pv-box {
-      width: 95vw;
-      height: 95vh;
-      background: #fff;
-      border-radius: 14px;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-      box-shadow: 0 30px 80px rgba(0,0,0,.35);
-      animation: pvScale .25s ease;
-    }
-
-    .pv-header {
-      height: 44px;
-      background: #0f172a;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 14px;
-      font-size: 14px;
-    }
-
-    .pv-title {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: calc(100% - 40px);
-    }
-
-    .pv-close {
-      background: none;
-      border: none;
-      color: #fff;
-      font-size: 20px;
-      cursor: pointer;
-    }
-
-    .pv-toolbar {
-      height: 42px;
-      background: #f1f5f9;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      font-size: 14px;
-      border-bottom: 1px solid #e5e7eb;
-    }
-
-    .pv-toolbar button {
-      width: 32px;
-      height: 32px;
-      border-radius: 6px;
-      border: none;
-      background: #e5e7eb;
-      cursor: pointer;
-    }
-
-    .pv-toolbar input {
-      width: 60px;
-      height: 30px;
-      text-align: center;
-      border-radius: 6px;
-      border: 1px solid #cbd5f5;
-    }
-
-    .pv-page { margin-left: 16px; }
-
-    .pv-body {
-      flex: 1;
-      overflow: auto;
-      background: #f8fafc;
-      display: flex;
-      justify-content: center;
-      align-items: flex-start;
-    }
-
-    canvas { margin: 16px auto; display: block; }
-
-    @keyframes pvFade { from{opacity:0} to{opacity:1} }
-    @keyframes pvScale { from{transform:scale(.96)} to{transform:scale(1)} }
+  .pv-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:9999}
+  .pv-box{width:95vw;height:95vh;background:#fff;border-radius:12px;display:flex;flex-direction:column;overflow:hidden;animation:pop .3s}
+  .pv-header{height:48px;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 14px}
+  .pv-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80%}
+  .pv-close{background:none;border:none;color:#fff;font-size:20px;cursor:pointer}
+  .pv-toolbar{height:42px;padding:0 12px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;gap:8px}
+  .pv-body{flex:1;overflow:auto;background:#f1f5f9;display:flex;justify-content:center}
+  iframe{border:none;width:100%;height:100%}
+  img{max-width:100%;max-height:100%;margin:auto}
+  pre{white-space:pre-wrap;padding:20px}
+  .pv-center{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
+  .pv-btn{padding:10px 18px;background:#2563eb;color:#fff;border-radius:8px;text-decoration:none}
+  @keyframes pop{from{transform:scale(.9);opacity:0}to{transform:1;opacity:1}}
   `;
   document.head.appendChild(style);
 
   overlay.querySelector(".pv-close").onclick = () => overlay.remove();
-  const body = overlay.querySelector(".pv-body");
 
-  // =====================================================
-  // PDF.js
-  // =====================================================
-  if (ext === "pdf") {
-    let pdfDoc, page = 1, scale = 1;
+  const viewer = overlay.querySelector("#viewer");
+  const toolbar = overlay.querySelector("#toolbar");
 
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d");
-    body.appendChild(canvas);
+  /* ================= PDF ================= */
+  if (PDF.includes(ext)) {
+    toolbar.innerHTML = `
+      <button id="z-">−</button>
+      <span id="zv">100%</span>
+      <button id="z+">+</button>
+      <span style="margin-left:10px">
+        <input id="pg" type="number" min="1" value="1" style="width:50px"> /
+        <span id="tp">?</span>
+      </span>
+    `;
 
     pdfjsLib.GlobalWorkerOptions.workerSrc =
       "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
+    let scale = 1, canvases = [], pdfDoc;
+    const box = document.createElement("div");
+    box.style.padding = "20px";
+    box.style.display = "flex";
+    box.style.flexDirection = "column";
+    box.style.gap = "20px";
+    viewer.appendChild(box);
+
     pdfjsLib.getDocument(path).promise.then(pdf => {
       pdfDoc = pdf;
-      document.getElementById("pvTotal").textContent = pdf.numPages;
-      render();
-    }).catch(err => {
-      body.innerHTML = "<p>Lỗi tải PDF</p>";
-      console.error(err);
+      overlay.querySelector("#tp").textContent = pdf.numPages;
+      for (let i=1;i<=pdf.numPages;i++){
+        const c=document.createElement("canvas");
+        c.dataset.p=i;
+        box.appendChild(c);
+        canvases.push(c);
+        render(i,c);
+      }
     });
 
-    function render() {
-      pdfDoc.getPage(page).then(p => {
-        const vp = p.getViewport({ scale });
-        canvas.width = vp.width;
-        canvas.height = vp.height;
-        p.render({ canvasContext: ctx, viewport: vp });
-        document.getElementById("pvZoom").value = Math.round(scale * 100);
-        document.getElementById("pvPage").value = page;
+    function render(n,c){
+      pdfDoc.getPage(n).then(p=>{
+        const v=p.getViewport({scale});
+        c.width=v.width;c.height=v.height;
+        p.render({canvasContext:c.getContext("2d"),viewport:v});
       });
     }
 
-    pvZoomIn.onclick = () => { scale = Math.min(scale + .1, 4); render(); };
-    pvZoomOut.onclick = () => { scale = Math.max(scale - .1, .25); render(); };
-    pvZoom.onchange = e => { scale = e.target.value / 100; render(); };
-    pvPage.onchange = e => {
-      const v = +e.target.value;
-      if (v >= 1 && v <= pdfDoc.numPages) { page = v; render(); }
-    };
-  }
+    overlay.querySelector("#z+").onclick=()=>setZoom(scale+.1);
+    overlay.querySelector("#z-").onclick=()=>setZoom(scale-.1);
 
-  // =====================================================
-  // ONLYOFFICE
-  // =====================================================
-  else if (["doc","docx","xls","xlsx","ppt","pptx"].includes(ext)) {
-    document.querySelector(".pv-toolbar").style.display = "none";
-    body.innerHTML = `<div id="office" style="width:100%;height:100%"></div>`;
+    function setZoom(z){
+      scale=Math.min(Math.max(z,.5),3);
+      overlay.querySelector("#zv").textContent=Math.round(scale*100)+"%";
+      canvases.forEach(c=>render(c.dataset.p,c));
+    }
 
-    new DocsAPI.DocEditor("office", {
-      document: {
-        fileType: ext,
-        title: fileName,
-        url: location.origin + "/" + path
-      },
-      editorConfig: {
-        mode: "view",
-        customization: {
-          toolbar: false,
-          statusBar: false
-        }
-      }
+    viewer.addEventListener("scroll",()=>{
+      let cur=1;
+      canvases.forEach(c=>{if(c.offsetTop<=viewer.scrollTop+10)cur=c.dataset.p});
+      overlay.querySelector("#pg").value=cur;
     });
+
+    overlay.querySelector("#pg").onchange=e=>{
+      const t=canvases[e.target.value-1];
+      t&&viewer.scrollTo({top:t.offsetTop-10,behavior:"smooth"});
+    };
+    return;
   }
 
-  // =====================================================
-  // FALLBACK
-  // =====================================================
-  else {
-    body.innerHTML = `
-    <p>Định dạng này không được hỗ trợ hoặc bị lỗi!</p></br>
-    <a href="${path}" download>Tải file</a>`;
+  /* ================= OFFICE ================= */
+  if (OFFICE.includes(ext)) {
+    toolbar.innerHTML = `<strong>ONLYOFFICE Viewer</strong>`;
+    viewer.innerHTML = `
+      <iframe src="https://view.officeapps.live.com/op/embed.aspx?src=${location.origin}/${path}"></iframe>
+    `;
+    return;
   }
+
+  /* ================= IMAGE ================= */
+  if (IMAGE.includes(ext)) {
+    toolbar.innerHTML = "";
+    viewer.innerHTML = `<img src="${path}">`;
+    return;
+  }
+
+  /* ================= TEXT ================= */
+  if (TEXT.includes(ext)) {
+    fetch(path).then(r=>r.text()).then(t=>{
+      viewer.innerHTML = `<pre>${t.replace(/</g,"&lt;")}</pre>`;
+    });
+    return;
+  }
+
+  /* ================= UNSUPPORTED ================= */
+  viewer.innerHTML = `
+    <div class="pv-center">
+      <strong>File này không được hỗ trợ hoặc bị lỗi!</strong>
+      <p class="pv-btn">Tải về máy để xem file</p>
+      <div class="wrap">
+        <a href="${path}" download>
+          <button class="download-btn" title="Tải xuống">
+            <i class="fa-solid fa-download"></i>
+          </button>
+        </a>
+      </div>
+    </div>
+  `;
 }
 </script>
 </body>
