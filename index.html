@@ -215,84 +215,74 @@ data_table.forEach((item, index) => {
   tbody.appendChild(tr);
 });
 
+>
 function preview(filePath) {
-  // ====== XÓA PREVIEW CŨ NẾU CÓ ======
   const old = document.getElementById("preview-overlay");
   if (old) old.remove();
 
-  // ====== LẤY TÊN FILE ======
   const fileName = filePath.split("/").pop();
   const ext = fileName.split(".").pop().toLowerCase();
 
-  // ====== RÚT GỌN TÊN FILE ======
-  function shortName(name, max = 38) {
-    const dot = name.lastIndexOf(".");
-    if (dot === -1) return name;
-    const base = name.slice(0, dot);
-    const ext = name.slice(dot);
-    if (base.length <= max) return name;
-    return base.slice(0, max) + "..." + ext;
-  }
-
-  // ====== TẠO OVERLAY ======
+  /* ===== OVERLAY ===== */
   const overlay = document.createElement("div");
   overlay.id = "preview-overlay";
   overlay.innerHTML = `
     <div class="preview-box">
       <div class="preview-header">
         <span class="preview-title" title="${fileName}">
-          ${shortName(fileName)}
+          ${fileName}
         </span>
         <button class="preview-close">✕</button>
       </div>
+
+      <div class="preview-toolbar">
+        <button id="zoomOut">−</button>
+        <input id="zoomInput" type="number" value="100" min="25" max="400">%
+        <button id="zoomIn">+</button>
+
+        <span style="margin-left:16px">
+          <input id="pageInput" type="number" value="1" min="1">
+          / <span id="pageCount">?</span>
+        </span>
+      </div>
+
       <div class="preview-body"></div>
     </div>
   `;
   document.body.appendChild(overlay);
 
-  // ====== CSS (GẮN ĐỘNG) ======
+  /* ===== CSS ===== */
   const style = document.createElement("style");
   style.textContent = `
     #preview-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,.65);
+      background: rgba(0,0,0,.6);
       z-index: 9999;
       display: flex;
-      align-items: center;
       justify-content: center;
-      animation: fadeIn .25s ease;
+      align-items: center;
     }
 
     .preview-box {
       width: 95vw;
       height: 95vh;
       background: #fff;
-      border-radius: 12px;
+      border-radius: 10px;
       display: flex;
       flex-direction: column;
       overflow: hidden;
-      box-shadow: 0 20px 60px rgba(0,0,0,.35);
-      animation: scaleIn .25s ease;
     }
 
     .preview-header {
-      height: 48px;
+      height: 42px;
       background: #0f172a;
       color: #fff;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 14px;
+      padding: 0 12px;
       font-size: 14px;
-      flex-shrink: 0;
-    }
-
-    .preview-title {
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: calc(100% - 40px);
     }
 
     .preview-close {
@@ -303,82 +293,134 @@ function preview(filePath) {
       cursor: pointer;
     }
 
-    .preview-body {
-      flex: 1;
-      background: #f8fafc;
+    .preview-toolbar {
+      height: 40px;
+      background: #e5e7eb;
       display: flex;
       align-items: center;
       justify-content: center;
-    }
-
-    .preview-body iframe,
-    .preview-body img,
-    .preview-body pre {
-      width: 100%;
-      height: 100%;
-      border: none;
-      background: #fff;
-    }
-
-    .preview-body pre {
-      padding: 16px;
-      overflow: auto;
-      font-family: Consolas, monospace;
+      gap: 6px;
       font-size: 14px;
     }
 
-    @keyframes fadeIn {
-      from {opacity:0}
-      to {opacity:1}
+    .preview-toolbar input {
+      width: 60px;
+      text-align: center;
     }
 
-    @keyframes scaleIn {
-      from {transform:scale(.95)}
-      to {transform:scale(1)}
+    .preview-toolbar button {
+      width: 32px;
+      height: 32px;
+      cursor: pointer;
+    }
+
+    .preview-body {
+      flex: 1;
+      background: #f8fafc;
+      overflow: auto;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    canvas {
+      margin: 12px auto;
+      display: block;
     }
   `;
   document.head.appendChild(style);
 
-  // ====== NÚT ĐÓNG ======
   overlay.querySelector(".preview-close").onclick = () => overlay.remove();
-
   const body = overlay.querySelector(".preview-body");
 
-  // ====== HIỂN THỊ THEO LOẠI FILE ======
-  if (["png","jpg","jpeg","gif","webp"].includes(ext)) {
-    const img = document.createElement("img");
-    img.src = filePath;
-    img.style.objectFit = "contain";
-    body.appendChild(img);
+  /* ===================================================
+     PDF.JS
+  =================================================== */
+  if (ext === "pdf") {
+    let pdfDoc = null;
+    let pageNum = 1;
+    let scale = 1;
 
-  } else if (ext === "pdf") {
-    const iframe = document.createElement("iframe");
-    iframe.src = filePath;
-    body.appendChild(iframe);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    body.appendChild(canvas);
 
-  } else if (ext === "txt") {
-    fetch(filePath)
-      .then(r => r.text())
-      .then(t => {
-        const pre = document.createElement("pre");
-        pre.textContent = t;
-        body.appendChild(pre);
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+    pdfjsLib.getDocument(filePath).promise.then(pdf => {
+      pdfDoc = pdf;
+      document.getElementById("pageCount").textContent = pdf.numPages;
+      render();
+    });
+
+    function render() {
+      pdfDoc.getPage(pageNum).then(page => {
+        const viewport = page.getViewport({ scale });
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        page.render({ canvasContext: ctx, viewport });
+        document.getElementById("pageInput").value = pageNum;
+        document.getElementById("zoomInput").value = Math.round(scale * 100);
       });
+    }
 
-  } else if (["doc","docx","xls","xlsx","ppt","pptx"].includes(ext)) {
-    const iframe = document.createElement("iframe");
-    iframe.src =
-      "https://docs.google.com/gview?embedded=1&url=" +
-      encodeURIComponent(location.origin + "/" + filePath);
-    body.appendChild(iframe);
+    document.getElementById("zoomIn").onclick = () => {
+      scale = Math.min(scale + 0.1, 4);
+      render();
+    };
 
-  } else {
+    document.getElementById("zoomOut").onclick = () => {
+      scale = Math.max(scale - 0.1, 0.25);
+      render();
+    };
+
+    document.getElementById("zoomInput").onchange = e => {
+      scale = e.target.value / 100;
+      render();
+    };
+
+    document.getElementById("pageInput").onchange = e => {
+      const p = +e.target.value;
+      if (p >= 1 && p <= pdfDoc.numPages) {
+        pageNum = p;
+        render();
+      }
+    };
+  }
+
+  /* ===================================================
+     ONLYOFFICE – DOCX / XLSX / PPTX
+  =================================================== */
+  else if (["doc","docx","xls","xlsx","ppt","pptx"].includes(ext)) {
+    body.innerHTML = `<div id="office-viewer" style="width:100%;height:100%"></div>`;
+
+    new DocsAPI.DocEditor("office-viewer", {
+      document: {
+        fileType: ext,
+        title: fileName,
+        url: location.origin + "/" + filePath
+      },
+      editorConfig: {
+        mode: "view",
+        customization: {
+          toolbar: false,
+          statusBar: false
+        }
+      }
+    });
+
+    // Ẩn toolbar PDF (không dùng)
+    overlay.querySelector(".preview-toolbar").style.display = "none";
+  }
+
+  /* ===================================================
+     FALLBACK
+  =================================================== */
+  else {
     body.innerHTML = `
-      <div style="text-align:center">
         <p>Không xem trực tiếp được định dạng này.</p>
-        <a href="${filePath}" download>Tải file về</a>
-      </div>
-    `;
+        <a href="${filePath}" download>Tải file</a>`;
   }
 }
 </script>
