@@ -98,9 +98,8 @@ button.download-btn:active {
   <thead>
     <tr>
       <th class="stt">STT</th>
-      <th>Tên tài liệu</th>
       <th>Loại</th>
-      <th>Tên file</th>
+      <th>Tên tài liệu</th>
       <th class="download">Tải xuống</th>
     </tr>
   </thead>
@@ -116,51 +115,53 @@ button.download-btn:active {
   ]
 */
 const data_table = [
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  // ["", "", "", ""],
-  ["ÔN TẬP GK I ANH 8</br>OTGKI T.Anh 8 - Cô NGọc Anh</br>ANH 8 ÔN TẬP GKI CAO HƯƠNG", "Đề", "OTGKI_T.Anh_8_-_Co_NGoc_Anh.pdf", "OTGKI_T.Anh_8_-_Co_NGoc_Anh.pdf"],
-  ["HƯỚNG DẪN ÔN TẬP KIỂM TRA GIỮA KỲ I MÔN GDCD 8 NH 25-26", "Đề", "HUONG_DAN_ON_TAP_KIEM_TRA_GIUA_KY_I_MON_GDCD_8_NH_25-26.pdf", "HUONG_DAN_ON_TAP_KIEM_TRA_GIUA_KY_I_MON_GDCD_8_NH_25-26.pdf"],
-  ["BÀI TẬP - HƯỚNG DẪN ÔN TẬP KIỂM TRA GIỮA KỲ I MÔN GDCD 8 NH 25-26", "Đề có đáp án", "BAI_TAP_-_HUONG_DAN_ON_TAP_KIEM_TRA_GIUA_KY_I_MON_GDCD_8_NH_25-26.pdf", "BAI_TAP_-_HUONG_DAN_ON_TAP_KIEM_TRA_GIUA_KY_I_MON_GDCD_8_NH_25-26.pdf"]
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  // ["", "", ""],
+  ["Đề", "Ôn tập GK 1 - Sinh 8</br>ÔN TẬP KHTN 8 (SINH) GK1 NH 25-26", "On_tap_GK_1_-_Sinh_8.pdf"],
+  ["Đề", "ÔN TẬP GK I ANH 8</br>OTGKI T.Anh 8 - Cô NGọc Anh</br>ANH 8 ÔN TẬP GKI CAO HƯƠNG", "OTGKI_T.Anh_8_-_Co_NGoc_Anh.pdf"],
+  ["Đề", "HƯỚNG DẪN ÔN TẬP KIỂM TRA GIỮA KỲ I MÔN GDCD 8 NH 25-26", "HUONG_DAN_ON_TAP_KIEM_TRA_GIUA_KY_I_MON_GDCD_8_NH_25-26.pdf"],
+  ["Đề có đáp án", "BÀI TẬP - HƯỚNG DẪN ÔN TẬP KIỂM TRA GIỮA KỲ I MÔN GDCD 8 NH 25-26", "BAI_TAP_-_HUONG_DAN_ON_TAP_KIEM_TRA_GIUA_KY_I_MON_GDCD_8_NH_25-26.pdf"]
 ];
 
 const tbody = document.getElementById("table-body");
 
 data_table.forEach((item, index) => {
-  const [tenTaiLieu, loai, tenFile, link] = item;
+  const [tenTaiLieu, loai, link] = item;
 
   const tr = document.createElement("tr");
 
   tr.innerHTML = `
     <td class="stt">${index + 1}</td>
-    <td>${tenTaiLieu}</td>
     <td class="loai">${loai}</td>
-    <td>${tenFile}</td>
+    <td>${tenTaiLieu}</td>
     <td class="download">
       <div class="wrap">
         <a href="${link}" download>
