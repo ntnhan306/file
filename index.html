@@ -9,6 +9,8 @@
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
       integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
       crossorigin="anonymous" referrerpolicy="no-referrer" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@onlyoffice/document-editor-web-apps@latest"></script>
 
 <style>
 body {
@@ -215,76 +217,84 @@ data_table.forEach((item, index) => {
   tbody.appendChild(tr);
 });
 
-function preview(filePath) {
-  const old = document.getElementById("preview-overlay");
-  if (old) old.remove();
+function preview(path) {
+  // ===== DỌN DẸP =====
+  document.getElementById("preview-overlay")?.remove();
 
-  const fileName = filePath.split("/").pop();
+  const fileName = path.split("/").pop();
   const ext = fileName.split(".").pop().toLowerCase();
 
-  /* ===== OVERLAY ===== */
+  // ===== OVERLAY =====
   const overlay = document.createElement("div");
   overlay.id = "preview-overlay";
   overlay.innerHTML = `
-    <div class="preview-box">
-      <div class="preview-header">
-        <span class="preview-title" title="${fileName}">
-          ${fileName}
-        </span>
-        <button class="preview-close">✕</button>
+    <div class="pv-box">
+      <div class="pv-header">
+        <span class="pv-title" title="${fileName}">${fileName}</span>
+        <button class="pv-close">✕</button>
       </div>
 
-      <div class="preview-toolbar">
-        <button id="zoomOut">−</button>
-        <input id="zoomInput" type="number" value="100" min="25" max="400">%
-        <button id="zoomIn">+</button>
+      <div class="pv-toolbar">
+        <button id="pvZoomOut">−</button>
+        <input id="pvZoom" type="number" value="100" min="25" max="400">%
+        <button id="pvZoomIn">+</button>
 
-        <span style="margin-left:16px">
-          <input id="pageInput" type="number" value="1" min="1">
-          / <span id="pageCount">?</span>
+        <span class="pv-page">
+          <input id="pvPage" type="number" value="1" min="1">
+          / <span id="pvTotal">?</span>
         </span>
       </div>
 
-      <div class="preview-body"></div>
+      <div class="pv-body"></div>
     </div>
   `;
   document.body.appendChild(overlay);
 
-  /* ===== CSS ===== */
+  // ===== CSS =====
   const style = document.createElement("style");
   style.textContent = `
     #preview-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0,0,0,.6);
-      z-index: 9999;
+      background: rgba(15,23,42,.65);
       display: flex;
-      justify-content: center;
       align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      animation: pvFade .25s ease;
     }
 
-    .preview-box {
+    .pv-box {
       width: 95vw;
       height: 95vh;
       background: #fff;
-      border-radius: 10px;
+      border-radius: 14px;
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      box-shadow: 0 30px 80px rgba(0,0,0,.35);
+      animation: pvScale .25s ease;
     }
 
-    .preview-header {
-      height: 42px;
+    .pv-header {
+      height: 44px;
       background: #0f172a;
       color: #fff;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 12px;
+      padding: 0 14px;
       font-size: 14px;
     }
 
-    .preview-close {
+    .pv-title {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: calc(100% - 40px);
+    }
+
+    .pv-close {
       background: none;
       border: none;
       color: #fff;
@@ -292,53 +302,60 @@ function preview(filePath) {
       cursor: pointer;
     }
 
-    .preview-toolbar {
-      height: 40px;
-      background: #e5e7eb;
+    .pv-toolbar {
+      height: 42px;
+      background: #f1f5f9;
       display: flex;
       align-items: center;
       justify-content: center;
       gap: 6px;
       font-size: 14px;
+      border-bottom: 1px solid #e5e7eb;
     }
 
-    .preview-toolbar input {
-      width: 60px;
-      text-align: center;
-    }
-
-    .preview-toolbar button {
+    .pv-toolbar button {
       width: 32px;
       height: 32px;
+      border-radius: 6px;
+      border: none;
+      background: #e5e7eb;
       cursor: pointer;
     }
 
-    .preview-body {
+    .pv-toolbar input {
+      width: 60px;
+      height: 30px;
+      text-align: center;
+      border-radius: 6px;
+      border: 1px solid #cbd5f5;
+    }
+
+    .pv-page { margin-left: 16px; }
+
+    .pv-body {
       flex: 1;
-      background: #f8fafc;
       overflow: auto;
+      background: #f8fafc;
       display: flex;
       justify-content: center;
       align-items: flex-start;
     }
 
-    canvas {
-      margin: 12px auto;
-      display: block;
-    }
+    canvas { margin: 16px auto; display: block; }
+
+    @keyframes pvFade { from{opacity:0} to{opacity:1} }
+    @keyframes pvScale { from{transform:scale(.96)} to{transform:scale(1)} }
   `;
   document.head.appendChild(style);
 
-  overlay.querySelector(".preview-close").onclick = () => overlay.remove();
-  const body = overlay.querySelector(".preview-body");
+  overlay.querySelector(".pv-close").onclick = () => overlay.remove();
+  const body = overlay.querySelector(".pv-body");
 
-  /* ===================================================
-     PDF.JS
-  =================================================== */
+  // =====================================================
+  // PDF.js
+  // =====================================================
   if (ext === "pdf") {
-    let pdfDoc = null;
-    let pageNum = 1;
-    let scale = 1;
+    let pdfDoc, page = 1, scale = 1;
 
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
@@ -347,58 +364,47 @@ function preview(filePath) {
     pdfjsLib.GlobalWorkerOptions.workerSrc =
       "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-    pdfjsLib.getDocument(filePath).promise.then(pdf => {
+    pdfjsLib.getDocument(path).promise.then(pdf => {
       pdfDoc = pdf;
-      document.getElementById("pageCount").textContent = pdf.numPages;
+      document.getElementById("pvTotal").textContent = pdf.numPages;
       render();
+    }).catch(err => {
+      body.innerHTML = "<p>Lỗi tải PDF</p>";
+      console.error(err);
     });
 
     function render() {
-      pdfDoc.getPage(pageNum).then(page => {
-        const viewport = page.getViewport({ scale });
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        page.render({ canvasContext: ctx, viewport });
-        document.getElementById("pageInput").value = pageNum;
-        document.getElementById("zoomInput").value = Math.round(scale * 100);
+      pdfDoc.getPage(page).then(p => {
+        const vp = p.getViewport({ scale });
+        canvas.width = vp.width;
+        canvas.height = vp.height;
+        p.render({ canvasContext: ctx, viewport: vp });
+        document.getElementById("pvZoom").value = Math.round(scale * 100);
+        document.getElementById("pvPage").value = page;
       });
     }
 
-    document.getElementById("zoomIn").onclick = () => {
-      scale = Math.min(scale + 0.1, 4);
-      render();
-    };
-
-    document.getElementById("zoomOut").onclick = () => {
-      scale = Math.max(scale - 0.1, 0.25);
-      render();
-    };
-
-    document.getElementById("zoomInput").onchange = e => {
-      scale = e.target.value / 100;
-      render();
-    };
-
-    document.getElementById("pageInput").onchange = e => {
-      const p = +e.target.value;
-      if (p >= 1 && p <= pdfDoc.numPages) {
-        pageNum = p;
-        render();
-      }
+    pvZoomIn.onclick = () => { scale = Math.min(scale + .1, 4); render(); };
+    pvZoomOut.onclick = () => { scale = Math.max(scale - .1, .25); render(); };
+    pvZoom.onchange = e => { scale = e.target.value / 100; render(); };
+    pvPage.onchange = e => {
+      const v = +e.target.value;
+      if (v >= 1 && v <= pdfDoc.numPages) { page = v; render(); }
     };
   }
 
-  /* ===================================================
-     ONLYOFFICE – DOCX / XLSX / PPTX
-  =================================================== */
+  // =====================================================
+  // ONLYOFFICE
+  // =====================================================
   else if (["doc","docx","xls","xlsx","ppt","pptx"].includes(ext)) {
-    body.innerHTML = `<div id="office-viewer" style="width:100%;height:100%"></div>`;
+    document.querySelector(".pv-toolbar").style.display = "none";
+    body.innerHTML = `<div id="office" style="width:100%;height:100%"></div>`;
 
-    new DocsAPI.DocEditor("office-viewer", {
+    new DocsAPI.DocEditor("office", {
       document: {
         fileType: ext,
         title: fileName,
-        url: location.origin + "/" + filePath
+        url: location.origin + "/" + path
       },
       editorConfig: {
         mode: "view",
@@ -408,18 +414,15 @@ function preview(filePath) {
         }
       }
     });
-
-    // Ẩn toolbar PDF (không dùng)
-    overlay.querySelector(".preview-toolbar").style.display = "none";
   }
 
-  /* ===================================================
-     FALLBACK
-  =================================================== */
+  // =====================================================
+  // FALLBACK
+  // =====================================================
   else {
     body.innerHTML = `
-        <p>Không xem trực tiếp được định dạng này.</p>
-        <a href="${filePath}" download>Tải file</a>`;
+    <p>Định dạng này không được hỗ trợ hoặc bị lỗi!</p></br>
+    <a href="${path}" download>Tải file</a>`;
   }
 }
 </script>
