@@ -383,15 +383,18 @@ function preview(path) {
       overlay.querySelector("#pg").value = cur;
     });
 
-    overlay.querySelector("#pg").onchange = e=>{
-      let p = parseInt(e.target.value);
-      if (p < 1) p = 1;
-      if (p > canvases.length) p = canvases.length;
-      e.target.value = p;
-    
-      const t = canvases[p-1];
-      t && viewer.scrollTo({top:t.offsetTop-10,behavior:"smooth"});
-    };
+      overlay.querySelector("#pg").onchange = e=>{
+        let p = parseInt(e.target.value);
+        if (p < 1) p = 1;
+        if (p > canvases.length) p = canvases.length;
+        e.target.value = p;
+      
+        const t = canvases[p-1];
+        t && viewer.scrollTo({top:t.offsetTop-10,behavior:"smooth"});
+      };
+      
+      return;
+      }
         
   /* ================= OFFICE ================= */
   if (OFFICE.includes(ext)) {
